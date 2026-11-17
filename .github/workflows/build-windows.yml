@@ -1,0 +1,49 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Habilitar soporte de escritorio Windows
+        run: flutter config --enable-windows-desktop
+
+      - name: Dependencias
+        run: flutter pub get
+
+      - name: Compilar (release)
+        run: flutter build windows --release
+
+      - name: Comprimir en .zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath EchoMusic-Windows.zip
+
+      - name: Subir artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: EchoMusic-Windows
+          path: EchoMusic-Windows.zip
+
+      - name: Publicar Release (solo con tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: EchoMusic-Windows.zip
